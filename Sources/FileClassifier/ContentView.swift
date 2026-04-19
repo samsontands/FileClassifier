@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var results: [ProcessingResult] = []
     @State private var isProcessing = false
     @State private var isTargeted = false
+    @State private var showingHistory = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -102,9 +103,19 @@ struct ContentView: View {
             Text("\(results.count) staged")
                 .font(.caption).foregroundStyle(.secondary)
             Spacer()
+            Button {
+                showingHistory = true
+            } label: {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
+            .controlSize(.small)
+            .help("View and revert past renames")
             Button("Clear") { clearAll() }
                 .disabled(results.isEmpty || isProcessing)
                 .controlSize(.small)
+        }
+        .sheet(isPresented: $showingHistory) {
+            HistoryView(isPresented: $showingHistory)
         }
     }
 

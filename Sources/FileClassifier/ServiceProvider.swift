@@ -5,6 +5,9 @@ extension Notification.Name {
     /// Posted when files were renamed via the Services menu or `--rename`
     /// CLI. `userInfo["results"]` is `[InPlaceRenameResult]`.
     static let fileClassifierDidRename = Notification.Name("FileClassifierDidRename")
+    /// Posted after a Service-triggered revert so any open History view can
+    /// refresh. Carries no payload — the UI re-reads `RenameHistory.all()`.
+    static let fileClassifierDidRevert = Notification.Name("FileClassifierDidRevert")
 }
 
 /// Finder right-click / Services integration. The app registers this as its
@@ -45,6 +48,41 @@ final class ServiceProvider: NSObject {
                 results.append(r)
             }
             await ServiceProvider.deliverSummary(results)
+        }
+    }
+
+    /// Registered in Info.plist under `NSMessage = "revertRenames"`. Lets
+    /// the user right-click one or more files that were previously renamed
+    /// and restore them to their original names.
+    @objc func revertRenames(
+        _ pboard: NSPasteboard,
+        userData: String?,
+        error errorPointer: AutoreleasingUnsafeMutablePointer<NSString>?
+    ) {
+        let urls = Self.readFileURLs(from: pboard)
+        guard !urls.isEmpty else {
+            errorPointer?.pointee = "No files selected." as NSString
+            return
+        }
+        let filesToRevert = urls
+        Task.detached(priority: .userInitiated) {
+            var succeeded = 0
+            var missingRecord = 0
+            var failed = 0
+            for url in filesToRevert {
+                switch RenameHistory.revert(fileAt: url) {
+                case .success:
+                    succeeded += 1
+                case .failure(let err):
+                    if case HistoryError.notFound = err { missingRecord += 1 }
+                    else { failed += 1 }
+                }
+            }
+            await ServiceProvider.deliverRevertSummary(
+                succeeded: succeeded,
+                missingRecord: missingRecord,
+                failed: failed
+            )
         }
     }
 
@@ -89,6 +127,19 @@ final class ServiceProvider: NSObject {
             object: nil,
             userInfo: ["results": results]
         )
+    }
+
+    @MainActor
+    private static func deliverRevertSummary(
+        succeeded: Int, missingRecord: Int, failed: Int
+    ) {
+        let title = "FileClassifier"
+        var body = "\(succeeded) reverted"
+        if missingRecord > 0 { body += " · \(missingRecord) not in history" }
+        if failed > 0        { body += " · \(failed) failed" }
+        postNotification(title: title, body: body)
+
+        NotificationCenter.default.post(name: .fileClassifierDidRevert, object: nil)
     }
 
     private static func postNotification(title: String, body: String) {

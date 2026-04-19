@@ -11,6 +11,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // otherwise the menu item may not appear until re-login on first run.
         NSApp.servicesProvider = ServiceProvider.shared
         NSUpdateDynamicServices()
+
+        // Belt-and-braces: even if Launch Services hasn't picked up the
+        // bundled .icns yet (common on the first install of a fresh build),
+        // force the Dock tile to our icon image at runtime.
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let icon = NSImage(contentsOf: iconURL) {
+            NSApp.applicationIconImage = icon
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

@@ -8,6 +8,10 @@ import FileClassifierCore
 ///   - `FileClassifier --rename <path> [<path>...]` — in-place rename.
 ///     Same logic as the Finder Services menu entry, wrapped as a CLI so
 ///     Automator workflows / shell scripts can use it.
+///   - `FileClassifier --revert <path> [<path>...]` — undo a previous
+///     rename using the on-disk history.
+///   - `FileClassifier --undo-last` — revert the most recent rename.
+///   - `FileClassifier --history` — list recorded renames.
 ///   - GUI mode (no args): launches the SwiftUI drop-zone window.
 
 let args = CommandLine.arguments
@@ -21,6 +25,22 @@ if args.count >= 3, args[1] == "--classify" {
 if args.count >= 3, args[1] == "--rename" {
     let paths = Array(args.dropFirst(2))
     runRenameCLI(for: paths)
+    exit(0)
+}
+
+if args.count >= 3, args[1] == "--revert" {
+    let paths = Array(args.dropFirst(2))
+    runRevertCLI(for: paths)
+    exit(0)
+}
+
+if args.count >= 2, args[1] == "--undo-last" {
+    runUndoLastCLI()
+    exit(0)
+}
+
+if args.count >= 2, args[1] == "--history" {
+    runHistoryCLI()
     exit(0)
 }
 
@@ -81,4 +101,50 @@ func runRenameCLI(for paths: [String]) {
         print("OK    \(from)  →  \(to)\(tag)")
     }
     exit(failures == 0 ? 0 : 1)
+}
+
+/// Reverts one or more files using the on-disk rename history. Matches first
+/// by full path, then by basename so the user can still undo even if they've
+/// moved the file.
+func runRevertCLI(for paths: [String]) {
+    var failures = 0
+    for raw in paths {
+        let url = URL(fileURLWithPath: raw).standardizedFileURL
+        switch RenameHistory.revert(fileAt: url) {
+        case .success(let restored):
+            print("OK    \(url.lastPathComponent)  →  \(restored.lastPathComponent)")
+        case .failure(let err):
+            print("FAIL  \(url.lastPathComponent): \(err.localizedDescription)")
+            failures += 1
+        }
+    }
+    exit(failures == 0 ? 0 : 1)
+}
+
+func runUndoLastCLI() {
+    guard let last = RenameHistory.lastRecord() else {
+        print("Nothing to undo — history is empty.")
+        exit(1)
+    }
+    switch RenameHistory.revertLast() {
+    case .success(let restored):
+        print("OK    \(last.renamedName)  →  \(restored.lastPathComponent)")
+        exit(0)
+    case .failure(let err):
+        print("FAIL  \(last.renamedName): \(err.localizedDescription)")
+        exit(1)
+    }
+}
+
+func runHistoryCLI() {
+    let all = RenameHistory.all()
+    if all.isEmpty {
+        print("No renames recorded yet.")
+        return
+    }
+    let fmt = ISO8601DateFormatter()
+    print("Most recent first — \(all.count) entries")
+    for r in all {
+        print("\(fmt.string(from: r.timestamp))  \(r.originalName)  →  \(r.renamedName)")
+    }
 }

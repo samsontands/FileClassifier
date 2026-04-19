@@ -56,6 +56,9 @@ enum FileRenamer {
                 )
             }
             try FileManager.default.moveItem(at: url, to: dest)
+            // Log the rename so the user can revert later, even across app
+            // relaunches. Only records successful moves.
+            RenameHistory.record(original: url, renamed: dest)
             return InPlaceRenameResult(
                 source: url, renamed: dest, docType: hit.type,
                 personName: nameHit.name, nameSource: nameHit.source,
