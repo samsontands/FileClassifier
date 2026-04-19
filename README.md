@@ -11,19 +11,63 @@ EPF Statement - 2024.pdf        →  CHAN-KAI-YUEN_EPF-STATEMENT.pdf
 Masters Certificate.pdf         →  CHAN-KAI-YUEN_DIPLOMA.pdf
 ```
 
+---
+
+## ⬇️ Install (non-technical users)
+
+**You just need a Mac.** No Xcode, no terminal, no Python, no downloads behind
+the scenes.
+
+1. Go to the [**Releases page**](https://github.com/samsontands/FileClassifier/releases/latest)
+   and download **`FileClassifier.dmg`**.
+2. Double-click the downloaded `.dmg` → a window opens showing the app
+   and an `Applications` folder.
+3. **Drag `FileClassifier` onto the `Applications` folder.** Done installing.
+4. Open **Applications** in Finder, **right-click** `FileClassifier` → **Open**.
+   Click **Open** in the popup.
+
+> **Why right-click the first time?** The app isn't notarized by Apple (that
+> needs a $99/year developer account). macOS shows a scary "can't be opened"
+> popup on the first double-click. Right-clicking → Open is Apple's built-in
+> escape hatch — you only need to do it **once**. After that, it opens like
+> any other app.
+
+### Using it
+
+**To rename a pile of files fast:**
+
+1. Select the files in Finder (one or many).
+2. Right-click → **Services** → **Rename with FileClassifier**.
+3. A notification tells you how many were renamed.
+
+**Or drag them into the app window:**
+
+1. Open FileClassifier.
+2. Drop files or folders into the window.
+3. Drag the renamed rows from the window into the folder where you want them
+   saved. Originals are not touched.
+
+**Made a mistake? Revert it.**
+
+- Click **History** in the app window → hit **Revert** on any row.
+- Or right-click the renamed file in Finder → **Services** → **Revert
+  FileClassifier Rename**.
+
+---
+
 ## What it does
 
-- **Offline**. No cloud, no Ollama, no model downloads. Uses Apple's on-device
-  Vision OCR and NaturalLanguage frameworks.
-- **Multi-language**. OCR covers English, Malay, Chinese, Japanese, Korean,
-  French, German, Spanish, Portuguese, Italian, Russian, Ukrainian, Thai,
+- **Offline.** No cloud, no AI service, no model downloads. Uses Apple's
+  on-device Vision OCR and NaturalLanguage frameworks.
+- **Multi-language OCR.** English, Malay, Chinese, Japanese, Korean, French,
+  German, Spanish, Portuguese, Italian, Russian, Ukrainian, Thai,
   Vietnamese, Arabic.
-- **Originals are never modified** in the drop-zone flow. Files are copied
-  to a per-session staging folder under the new name; drag them out to save.
-- **Right-click rename** in Finder (single or multi-select) via a macOS
-  Services entry — this one does rename in place because you opted in.
-- **Lightweight**. ~320 KB zip, universal binary (arm64 + x86_64), runs on
-  an 8 GB M1 MacBook Air without breaking a sweat.
+- **Originals preserved** in the drop-zone flow. Files are copied into a
+  per-session staging folder under the new name; drag them out to save.
+- **Right-click rename** in Finder (single or multi-select) for the fast
+  path — renames in place, with one-click revert.
+- **~1 MB download.** Universal binary (Apple Silicon + Intel). Runs fine
+  on an 8 GB M1 MacBook Air.
 
 ## Supported formats
 
@@ -43,8 +87,6 @@ EPF-STATEMENT · BANK-STATEMENT · PAYSLIP · TAX-RETURN · UTILITY-BILL ·
 MEDICAL · CERTIFICATE · PHOTO · DOCUMENT`
 
 Rule-based keyword + regex scoring — deterministic, fast, zero runtime cost.
-Specific rules (e.g. "birth certificate") outscore the generic "certificate"
-fallback.
 
 ## Filename format
 
@@ -54,72 +96,47 @@ PERSON-NAME_DOCTYPE.ext
 
 Fallbacks:
 
-- No person name detected → `RENAME-ME_DOCTYPE.ext` (the UI badges the row
+- No person name detected → `RENAME-ME_DOCTYPE.ext` (the UI flags the row
   with a **RENAME ME** pill so you catch it).
 - No doc type → `PERSON-NAME.ext`.
 - Neither → `RENAME-ME_DOCUMENT_<timestamp>.ext`.
 
-## Build
+---
+
+## Build from source (developers)
+
+Requires Xcode command-line tools (`xcode-select --install`).
 
 ```bash
-./build.sh
-open build/FileClassifier.app
+./build.sh                  # universal .app + .zip in build/
+./Scripts/make-dmg.sh       # drag-to-Applications .dmg
+swift test                  # 34 unit tests
 ```
 
-Produces `build/FileClassifier.app` and a `FileClassifier.zip` you can send
-to someone else.
-
-First run: right-click the .app and choose **Open** so Gatekeeper lets it
-through (it's ad-hoc signed, not notarized).
-
-## Use
-
-**GUI (drop-zone):**
-
-1. Launch the app.
-2. Drop files or folders into the window — they OCR, get renamed, and land
-   in a staging folder.
-3. Drag the renamed row out of the window into your save location in Finder.
-   Originals stay untouched.
-
-**Finder right-click (rename in place):**
-
-1. Select one or more files in Finder.
-2. Right-click → Services → **Rename with FileClassifier**.
-3. Files are renamed in their current folder. A notification summarizes the
-   batch (e.g. "5 renamed · 1 needs manual review").
-
-> On first install the Services menu may take a minute to appear. Launching
-> the app once calls `NSUpdateDynamicServices()` which forces macOS to pick
-> it up; if you still don't see it, log out and back in.
-
-**CLI (dry-run):**
+To regenerate the app icon from its SF Symbol source:
 
 ```bash
-./.build/debug/FileClassifier --classify "path/to/file.pdf"
+swift Scripts/make-icon.swift
 ```
 
-Prints the proposed new filename, doc type, detected name, and OCR head
-snippet — useful for testing against a sample set without moving anything.
-
-**CLI (rename in place, scriptable / Automator):**
+## CLI
 
 ```bash
-./FileClassifier.app/Contents/MacOS/FileClassifier --rename file1.pdf file2.png …
+# Dry-run: print the proposed new name without moving the file
+./FileClassifier.app/Contents/MacOS/FileClassifier --classify "file.pdf"
+
+# Rename files in place (scriptable — exit 0 = all ok)
+./FileClassifier.app/Contents/MacOS/FileClassifier --rename file1.pdf file2.png
+
+# Revert a previous rename
+./FileClassifier.app/Contents/MacOS/FileClassifier --revert file.pdf
+
+# Undo the most recent rename
+./FileClassifier.app/Contents/MacOS/FileClassifier --undo-last
+
+# Show rename history
+./FileClassifier.app/Contents/MacOS/FileClassifier --history
 ```
-
-Exit code is `0` if every file renamed, `1` otherwise.
-
-## Tests
-
-```bash
-swift test
-```
-
-34 tests covering doc-type detection, name extraction (labelled,
-next-line-label, all-caps, title-case, NLTagger), filename building, and
-end-to-end pipelines — including Malaysian bilingual edge cases (MyKad,
-KWSP EPF, Nama/Name passports, split surname/given-names transcripts).
 
 ## Architecture
 
@@ -134,7 +151,8 @@ FileClassifier (executable)       ← app layer
   ├── PDFRasterizer               ← PDFKit → 200 DPI CGImages
   ├── FileProcessor               ← drop-zone pipeline (OCR → classify → stage)
   ├── FileRenamer                 ← in-place rename for Services / --rename
+  ├── RenameHistory               ← JSON-persisted log; powers --revert
   ├── FileStaging                 ← per-session /tmp directory
   ├── ServiceProvider             ← NSServices handler for Finder right-click
-  └── SwiftUI views               ← drop zone, result list, draggable rows
+  └── SwiftUI views               ← drop zone, result list, history sheet
 ```
