@@ -20,7 +20,7 @@ struct OCRService {
         "fr-FR", "de-DE", "es-ES",
         "pt-BR", "it-IT",
         "ru-RU", "uk-UA",
-        "th-TH", "vi-VT",
+        "th-TH", "vi-VN",
         "ar-SA",                        // Arabic
     ]
 
