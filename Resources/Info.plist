@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>FileClassifier</string>
+    <key>CFBundleDisplayName</key>
+    <string>File Classifier</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.samson.fileclassifier</string>
+    <key>CFBundleExecutable</key>
+    <string>FileClassifier</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 Samson. All rights reserved.</string>
+    <!--
+        Expose a "Rename with FileClassifier" action in Finder's right-click
+        menu (Services submenu — or top-level if macOS promotes it based on
+        usage). Works for a single file or a multi-selection.
+    -->
+    <key>NSServices</key>
+    <array>
+        <dict>
+            <key>NSMenuItem</key>
+            <dict>
+                <key>default</key>
+                <string>Rename with FileClassifier</string>
+            </dict>
+            <key>NSMessage</key>
+            <string>renameFiles</string>
+            <key>NSPortName</key>
+            <string>FileClassifier</string>
+            <key>NSSendTypes</key>
+            <array>
+                <string>public.file-url</string>
+                <string>NSFilenamesPboardType</string>
+            </array>
+            <key>NSRequiredContext</key>
+            <dict>
+                <key>NSServiceCategory</key>
+                <string>public.item</string>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
