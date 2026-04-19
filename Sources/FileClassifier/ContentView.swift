@@ -126,7 +126,9 @@ struct ContentView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [.pdf, .image]
+        // Keep picker parity with drag-and-drop: let users choose any file,
+        // then filter unsupported extensions in `process(urls:)`.
+        panel.allowedContentTypes = []
         if panel.runModal() == .OK {
             process(urls: panel.urls)
         }
